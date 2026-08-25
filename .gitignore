@@ -1,0 +1,26 @@
+# 作業系統產生的檔案
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 編輯器與 IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*~
+
+# AI 工具與索引產生的目錄
+.agents/
+.codegraph/
+.claude/
+
+# Composer（目前未使用，先預留）
+/vendor/
+composer.lock
+
+# 打包產出
+/build/
+/dist/
+*.zip
