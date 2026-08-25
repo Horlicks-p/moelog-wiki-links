@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 7.4 是外掛 header 宣告的最低版本，一併驗證未誤用較新語法。
+        php: [ '7.4', '8.4' ]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: 安裝 PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, json
+          coverage: none
+
+      - name: 語法檢查
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+
+      - name: 解析與輸出測試
+        run: php tests/test-parser.php
+
+      - name: API 回應解析測試
+        run: php tests/test-api-parsing.php
+
+      - name: 設定頁渲染測試
+        run: php tests/test-settings-render.php
+
+      - name: 確認測試沒有連外網
+        # 三套測試都以 fixture 與 stub 執行；真的送出 HTTP 請求就代表有東西寫錯了。
+        run: |
+          if grep -rnE '\b(curl_exec|file_get_contents\s*\(\s*[\x27"]https?://|fsockopen)' tests/; then
+            echo "測試檔內出現實際連線的呼叫"
+            exit 1
+          fi
+          echo "沒有連外網的呼叫"

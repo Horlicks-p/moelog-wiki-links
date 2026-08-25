@@ -114,6 +114,11 @@ function absent( $label, $haystack, $needle ) {
 function reset_batches() {
 	$ref  = new ReflectionClass( 'MWL_Wikipedia' );
 	$prop = $ref->getProperty( 'batches_this_request' );
+	// PHP 8.1 起 reflection 預設就能存取私有成員，setAccessible() 在 8.5 已標為
+	// deprecated；8.0 以下則非呼叫不可，否則會拋 ReflectionException。
+	if ( PHP_VERSION_ID < 80100 ) {
+		$prop->setAccessible( true );
+	}
 	$prop->setValue( null, 0 );
 	$GLOBALS['mwl_http_calls']   = 0;
 	$GLOBALS['mwl_http_batches'] = array();
@@ -124,6 +129,9 @@ function reset_batches() {
 function seed( $title, $lang, $exists, $target = null ) {
 	$ref = new ReflectionClass( 'MWL_Wikipedia' );
 	$m   = $ref->getMethod( 'write_cache' );
+	if ( PHP_VERSION_ID < 80100 ) {
+		$m->setAccessible( true );
+	}
 	$m->invoke( null, MWL_Wikipedia::normalize( $title ), $lang, $exists, null === $target ? MWL_Wikipedia::normalize( $title ) : $target );
 }
 
