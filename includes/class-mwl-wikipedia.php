@@ -19,7 +19,7 @@ class MWL_Wikipedia {
 	const REALTIME_MAX_BATCHES = 2;
 
 	/** 快取鍵前綴。 */
-	const CACHE_PREFIX = 'mwl';
+	const CACHE_PREFIX = 'mwl_wiki_links_';
 
 	/** 快取世代編號的 option 名稱，遞增即等於全部失效。 */
 	const SALT_OPTION = 'mwl_cache_salt';
@@ -288,20 +288,24 @@ class MWL_Wikipedia {
 				continue;
 			}
 
-			$cached = 'force' === $mode ? false : self::read_cache( $title, $lang );
+			$cached = self::read_cache( $title, $lang );
 			if ( false !== $cached ) {
 				$result[ $title ] = array(
 					'state'  => $cached['e'] ? 'exists' : 'missing',
 					'target' => '' !== (string) $cached['t'] ? $cached['t'] : $title,
 				);
-				continue;
+				if ( 'force' !== $mode ) {
+					continue;
+				}
+			} else {
+				$result[ $title ] = array(
+					'state'  => 'unknown',
+					'target' => $title,
+				);
 			}
 
-			$result[ $title ] = array(
-				'state'  => 'unknown',
-				'target' => $title,
-			);
-			$pending[]        = $title;
+			// force 模式仍會重查，但 API 失敗或超出同步額度時可沿用舊快取顯示。
+			$pending[] = $title;
 		}
 
 		if ( ! $pending || 'cache' === $mode ) {

@@ -41,6 +41,9 @@ jobs:
       - name: 設定頁渲染測試
         run: php tests/test-settings-render.php
 
+      - name: 外掛生命週期測試
+        run: php tests/test-lifecycle.php
+
       - name: 確認測試沒有連外網
         # 三套測試都以 fixture 與 stub 執行；真的送出 HTTP 請求就代表有東西寫錯了。
         run: |

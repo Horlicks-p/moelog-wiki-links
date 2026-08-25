@@ -117,6 +117,7 @@ $html                                   = render();
 contains( '紅連結行為欄位', $html, 'mwl_settings[redlink_target]' );
 contains( '檢查模式欄位', $html, 'mwl_settings[check_mode]' );
 contains( '快取天數欄位', $html, 'mwl_settings[ttl_hit]' );
+contains( '摘要選項註明只影響手動摘要', $html, '手動摘要（the_excerpt）也套用' );
 contains( '清除快取表單', $html, 'value="mwl_flush_cache"' );
 
 echo "\n========================================\n";

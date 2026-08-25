@@ -35,6 +35,8 @@ tests/
   wp-compat.php                從 WP core 複製的 add_query_arg 等實作（非簡化 stub）
   test-parser.php              解析／輸出／網址編碼／批次上限的離線測試
   test-api-parsing.php         用真實 API 回應驗證解析邏輯
+  test-settings-render.php     設定頁輸出的離線 smoke test
+  test-lifecycle.php           停用／解除安裝與 cron 清理測試
   fixtures/                    從 ja / en 維基百科擷取的實際回應
 ```
 
@@ -43,10 +45,10 @@ tests/
 三種模式，在設定頁選擇：
 
 - **background（預設）** — 前台只讀快取，讀不到的詞彙排進 WP-Cron 背景批次查詢，該次先以一般連結輸出，下次瀏覽就正確。前台不發出任何外部請求。
-- **realtime** — 前台遇到未快取的詞彙就同步查 API，首次載入會慢一些，但立刻正確。單次請求最多打 `MWL_Wikipedia::REALTIME_MAX_BATCHES`（2）批，額度是**整個請求**共用的：逐批把關，多語言混用也不會各自再吃一份，超出的自動改走背景查詢。儲存文章時的預熱不受這個額度限制，會一次查完。
+- **realtime** — 前台遇到未快取的詞彙就同步查 API，首次載入會慢一些，但立刻正確。單次請求最多打 `MWL_Wikipedia::REALTIME_MAX_BATCHES`（2）批，額度是**整個請求**共用的：逐批把關，多語言混用也不會各自再吃一份，超出的自動改走背景查詢。儲存文章與編輯面板的即時重查也共用同一上限，避免請求長時間卡住。
 - **off** — 完全不查，一律視為條目存在。
 
-不論哪種模式，**儲存文章時都會立刻查一次**，所以文章發佈後前台通常已經有快取。
+啟用存在性檢查時，**儲存文章會在批次上限內立刻預熱快取**，超出的詞彙改排背景查詢，所以文章發佈後前台通常已經有快取。
 
 查詢一律走批次：一個 HTTP 請求最多帶 50 個標題（MediaWiki 對未登入用戶的上限），並帶 `redirects=1` 跟隨重新導向，所以 `[[en:wordpress]]` 會連到正式條目 `WordPress`。
 
@@ -59,6 +61,8 @@ tests/
 ```bash
 php tests/test-parser.php
 php tests/test-api-parsing.php
+php tests/test-settings-render.php
+php tests/test-lifecycle.php
 ```
 
 `test-api-parsing.php` 使用 `tests/fixtures/` 裡從維基百科實際擷取的回應，涵蓋重新導向、標題正規化、`missing`、`invalid`、`special` 與 API 錯誤等情況。

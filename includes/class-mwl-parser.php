@@ -20,7 +20,7 @@ class MWL_Parser {
 	/**
 	 * 不進行替換的 HTML 區塊，以及所有 HTML 標籤本身。
 	 */
-	const PROTECT_PATTERN = '#<(pre|code|kbd|samp|script|style|textarea)\b[^>]*>.*?</\1\s*>|<a\b[^>]*>.*?</a\s*>|<!--.*?-->|<[^>]*>#is';
+	const PROTECT_PATTERN = '#<(pre|code|kbd|samp|script|style|textarea)\b[^>]*>.*?</\1\s*>|<a\b[^>]*>.*?</a\s*>|<!--.*?-->|</?[a-z][^>]*>|<![^>]*>#is';
 
 	/**
 	 * 單例。
@@ -59,12 +59,12 @@ class MWL_Parser {
 	 * 掛載 hook。
 	 */
 	public function register() {
-		// 優先權 10：在 do_blocks（9）之後、do_shortcode（11）之前，
-		// 這樣動態區塊的輸出也會被處理，而 [[foo]] 不會先被當成跳脫短碼吃掉。
-		add_filter( 'the_content', array( $this, 'filter_content' ), 10 );
+		// 與 do_blocks 同為優先權 9，但外掛較晚註冊，因此仍在 do_blocks 之後；
+		// 同時趕在 wptexturize（10）之前，避免條目中的引號先被轉成 HTML entity。
+		add_filter( 'the_content', array( $this, 'filter_content' ), 9 );
 
 		if ( MWL_Settings::get( 'apply_excerpt' ) ) {
-			add_filter( 'the_excerpt', array( $this, 'filter_content' ), 10 );
+			add_filter( 'the_excerpt', array( $this, 'filter_content' ), 9 );
 		}
 
 		add_action( 'wp_head', array( $this, 'print_styles' ) );
@@ -303,7 +303,7 @@ class MWL_Parser {
 				$url = MWL_Wikipedia::search_url( $title, $lang );
 			}
 		} else {
-			if ( 'unknown' === $row['state'] ) {
+			if ( 'unknown' === $row['state'] && 'off' !== MWL_Settings::get( 'check_mode' ) ) {
 				$classes[] = 'mwl-unchecked';
 			}
 			$url = MWL_Wikipedia::article_url( $target, $lang );
@@ -414,7 +414,7 @@ class MWL_Parser {
 		}
 
 		foreach ( $by_lang as $lang => $titles ) {
-			MWL_Wikipedia::lookup( $titles, $lang, 'realtime' );
+			MWL_Wikipedia::lookup( $titles, $lang, 'realtime', MWL_Wikipedia::REALTIME_MAX_BATCHES );
 		}
 	}
 }

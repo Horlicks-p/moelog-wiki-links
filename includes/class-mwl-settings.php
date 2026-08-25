@@ -376,7 +376,7 @@ class MWL_Settings {
 										<?php echo esc_html( $label ); ?>
 									</label>
 								<?php endforeach; ?>
-								<p class="description"><?php esc_html_e( '不論哪種模式，儲存文章時都會立刻查一次，所以文章發佈後前台通常已經有快取。', 'moelog-wiki-links' ); ?></p>
+								<p class="description"><?php esc_html_e( '啟用存在性檢查時，儲存文章會在同步批次上限內預熱快取，超出的詞彙改排背景查詢。', 'moelog-wiki-links' ); ?></p>
 							</fieldset>
 						</td>
 					</tr>
@@ -387,7 +387,7 @@ class MWL_Settings {
 								<label style="display:block"><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[new_window]" value="1" <?php checked( $o['new_window'], 1 ); ?>> <?php esc_html_e( '在新視窗開啟', 'moelog-wiki-links' ); ?></label>
 								<label style="display:block"><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[nofollow]" value="1" <?php checked( $o['nofollow'], 1 ); ?>> <?php esc_html_e( '加上 rel="nofollow"', 'moelog-wiki-links' ); ?></label>
 								<label style="display:block"><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[show_tooltip]" value="1" <?php checked( $o['show_tooltip'], 1 ); ?>> <?php esc_html_e( '加上 title 提示文字', 'moelog-wiki-links' ); ?></label>
-								<label style="display:block"><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[apply_excerpt]" value="1" <?php checked( $o['apply_excerpt'], 1 ); ?>> <?php esc_html_e( '摘要（the_excerpt）也套用', 'moelog-wiki-links' ); ?></label>
+								<label style="display:block"><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[apply_excerpt]" value="1" <?php checked( $o['apply_excerpt'], 1 ); ?>> <?php esc_html_e( '手動摘要（the_excerpt）也套用', 'moelog-wiki-links' ); ?></label>
 							</fieldset>
 						</td>
 					</tr>

@@ -2,7 +2,7 @@
 Contributors: moelog
 Tags: wiki, wikipedia, links, shortcode, acgn
 Requires at least: 6.0
-Tested up to: 6.8
+Tested up to: 7.1
 Requires PHP: 7.4
 Stable tag: 1.0.0
 License: GPLv2 or later
@@ -32,7 +32,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 = 存在性檢查怎麼運作 =
 
-1. 儲存文章時，外掛立刻查一次該文所有詞彙並寫入快取。
+1. 儲存文章時，外掛會在同步批次上限內立刻查詢並寫入快取，超出的詞彙改排背景查詢。
 2. 前台渲染時只讀快取，讀不到的詞彙排入 WP-Cron 背景批次查詢（一次最多 50 個詞彙一個請求），該次仍以一般連結輸出。
 3. 下次瀏覽時快取已就緒，狀態即正確。
 

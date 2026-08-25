@@ -10,7 +10,6 @@
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       moelog-wiki-links
- * Domain Path:       /languages
  *
  * @package MoelogWikiLinks
  */
@@ -31,8 +30,6 @@ require_once MWL_DIR . 'includes/class-mwl-metabox.php';
  * 外掛啟動點。
  */
 function mwl_bootstrap() {
-	load_plugin_textdomain( 'moelog-wiki-links', false, dirname( plugin_basename( MWL_FILE ) ) . '/languages' );
-
 	MWL_Parser::instance()->register();
 	MWL_Wikipedia::instance()->register();
 
@@ -47,7 +44,7 @@ add_action( 'plugins_loaded', 'mwl_bootstrap' );
  * 停用時只清掉待跑的背景查詢；快取留著，重新啟用時不必整批重查。
  */
 function mwl_deactivate() {
-	wp_clear_scheduled_hook( MWL_Wikipedia::CRON_HOOK );
+	wp_unschedule_hook( MWL_Wikipedia::CRON_HOOK );
 }
 register_deactivation_hook( __FILE__, 'mwl_deactivate' );
 
@@ -55,6 +52,7 @@ register_deactivation_hook( __FILE__, 'mwl_deactivate' );
  * 解除安裝時一併移除設定。
  */
 function mwl_uninstall() {
+	wp_unschedule_hook( MWL_Wikipedia::CRON_HOOK );
 	delete_option( MWL_Settings::OPTION );
 	MWL_Wikipedia::flush_all_cache();
 

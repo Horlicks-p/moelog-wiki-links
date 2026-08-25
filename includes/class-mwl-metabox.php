@@ -80,7 +80,7 @@ class MWL_Metabox {
 			<button type="button" class="button" id="mwl-recheck"><?php esc_html_e( '重新檢查（會即時查詢維基百科）', 'moelog-wiki-links' ); ?></button>
 			<span class="spinner" id="mwl-spinner" style="float:none;margin:0"></span>
 		</p>
-		<p class="description"><?php esc_html_e( '檢查的是最後一次儲存的內容，草稿存檔後再按重新檢查最準。', 'moelog-wiki-links' ); ?></p>
+		<p class="description"><?php esc_html_e( '檢查的是最後一次儲存的內容；單次同步查詢有批次上限，超出的詞彙會改排背景查詢。', 'moelog-wiki-links' ); ?></p>
 		<script>
 		( function () {
 			var btn = document.getElementById( 'mwl-recheck' );
@@ -156,7 +156,8 @@ class MWL_Metabox {
 
 		$status = array();
 		foreach ( $by_lang as $lang => $titles ) {
-			$status[ $lang ] = MWL_Wikipedia::lookup( $titles, $lang, $mode );
+			$max_batches     = 'force' === $mode ? MWL_Wikipedia::REALTIME_MAX_BATCHES : 0;
+			$status[ $lang ] = MWL_Wikipedia::lookup( $titles, $lang, $mode, $max_batches );
 		}
 
 		$seen    = array();
@@ -189,10 +190,12 @@ class MWL_Metabox {
 				$style = 'color:#787c82';
 			}
 
+			$link_title = isset( $row['target'] ) && '' !== (string) $row['target'] ? $row['target'] : $term['title'];
+
 			$rows[] = sprintf(
 				'<li style="margin:0 0 4px">%1$s <a href="%2$s" target="_blank" rel="noopener" style="%3$s">%4$s</a> <span class="description">%5$s%6$s</span></li>',
 				$icon,
-				esc_url( MWL_Wikipedia::article_url( $term['title'], $term['lang'] ) ),
+				esc_url( MWL_Wikipedia::article_url( $link_title, $term['lang'] ) ),
 				esc_attr( $style ),
 				esc_html( $term['title'] ),
 				esc_html( $term['lang'] ),

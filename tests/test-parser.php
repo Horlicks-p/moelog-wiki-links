@@ -14,8 +14,12 @@ $GLOBALS['mwl_scheduled']  = array();
 $GLOBALS['mwl_http_calls'] = 0;
 $GLOBALS['mwl_http_batches'] = array();
 $GLOBALS['mwl_http_fail'] = false;
+$GLOBALS['mwl_filters'] = array();
+$GLOBALS['mwl_posts'] = array();
 
-function add_filter( ...$a ) {}
+function add_filter( $tag, $callback, $priority = 10, $accepted_args = 1 ) {
+	$GLOBALS['mwl_filters'][] = array( $tag, $callback, $priority, $accepted_args );
+}
 function add_action( ...$a ) {}
 function apply_filters( $tag, $value, ...$rest ) { return $value; }
 function get_option( $name, $default = false ) { return $GLOBALS['mwl_options'][ $name ] ?? $default; }
@@ -59,6 +63,7 @@ class WP_Post {
 }
 function wp_is_post_revision( $id ) { return false; }
 function wp_is_post_autosave( $id ) { return false; }
+function get_post( $id ) { return isset( $GLOBALS['mwl_posts'][ $id ] ) ? $GLOBALS['mwl_posts'][ $id ] : null; }
 function plugin_basename( $f ) { return 'moelog-wiki-links/moelog-wiki-links.php'; }
 function admin_url( $p = '' ) { return 'https://www.moelog.com/wp-admin/' . $p; }
 
@@ -66,6 +71,7 @@ require __DIR__ . '/wp-compat.php';
 require __DIR__ . '/../includes/class-mwl-settings.php';
 require __DIR__ . '/../includes/class-mwl-wikipedia.php';
 require __DIR__ . '/../includes/class-mwl-parser.php';
+require __DIR__ . '/../includes/class-mwl-metabox.php';
 
 /* --------------------------------------------------------------------- */
 
@@ -168,6 +174,7 @@ echo "\n=== 2. 標題正規化 ===\n";
 check( '底線與空白等價', MWL_Wikipedia::normalize( 'cowboy_bebop' ), MWL_Wikipedia::normalize( 'cowboy bebop' ) );
 check( '首字母大寫', MWL_Wikipedia::normalize( 'wordpress' ), 'Wordpress' );
 check( '日文不受影響', MWL_Wikipedia::normalize( '初音ミク' ), '初音ミク' );
+check( '快取前綴使用完整外掛命名空間', MWL_Wikipedia::CACHE_PREFIX, 'mwl_wiki_links_' );
 
 echo "\n=== 3. 詞彙擷取 ===\n";
 $content = '參考 [[初音ミク]] 與 [[en:Vocaloid|ボカロ]]，還有 \[[這個不轉換]]。';
@@ -190,10 +197,27 @@ $terms4 = MWL_Parser::extract_terms( '[[Category:動畫]] 與 [[xx:未知前綴]
 check( '非允許前綴視為條目一部分', $terms4[0]['title'], 'Category:動畫' );
 check( '未知語言碼不當前綴', $terms4[1]['title'], 'xx:未知前綴' );
 
+$terms5 = MWL_Parser::extract_terms( 'if (a < b) then [[初音ミク]] endif >' );
+check( '裸小於號不會吞掉後面的詞彙', count( $terms5 ), 1 );
+
+$GLOBALS['mwl_options']['mwl_settings'] = array( 'apply_excerpt' => 1 );
+MWL_Settings::reset_cache();
+$parser = MWL_Parser::instance();
+$parser->register();
+$priorities = array();
+foreach ( $GLOBALS['mwl_filters'] as $filter ) {
+	if ( is_array( $filter[1] ) && $parser === $filter[1][0] && 'filter_content' === $filter[1][1] ) {
+		$priorities[ $filter[0] ] = $filter[2];
+	}
+}
+check( 'the_content 在 wptexturize 前執行', isset( $priorities['the_content'] ) ? $priorities['the_content'] : null, 9 );
+check( 'the_excerpt 在 wptexturize 前執行', isset( $priorities['the_excerpt'] ) ? $priorities['the_excerpt'] : null, 9 );
+$GLOBALS['mwl_options']['mwl_settings'] = array();
+MWL_Settings::reset_cache();
+
 echo "\n=== 4. 連結輸出（存在的條目）===\n";
 seed( '初音ミク', 'ja', true );
 seed( 'Vocaloid', 'en', true, 'Vocaloid' );
-$parser = MWL_Parser::instance();
 $out    = $parser->filter_content( '參考 [[初音ミク]] 與 [[en:Vocaloid|ボカロ]]。' );
 contains( '藍色連結指向 ja 維基', $out, 'href="https://ja.wikipedia.org/wiki/' . rawurlencode( '初音ミク' ) . '"' );
 contains( '英文條目用 en 網域', $out, 'href="https://en.wikipedia.org/wiki/Vocaloid"' );
@@ -247,6 +271,13 @@ MWL_Wikipedia::schedule_queue();
 check( 'shutdown 後排程一筆 cron', count( $GLOBALS['mwl_scheduled'] ), 1 );
 contains( '未知狀態先當作存在輸出', $out, 'mwl-unchecked' );
 
+$GLOBALS['mwl_options']['mwl_settings'] = array( 'check_mode' => 'off' );
+MWL_Settings::reset_cache();
+$out = $parser->filter_content( '[[關閉檢查的詞彙]]' );
+absent( 'off 模式不標記為未檢查', $out, 'mwl-unchecked' );
+$GLOBALS['mwl_options']['mwl_settings'] = array();
+MWL_Settings::reset_cache();
+
 echo "\n=== 9. 效能：大量詞彙只跑一次解析 ===\n";
 $big  = str_repeat( '前面 [[初音ミク]] 中間 [[en:Vocaloid]] 後面。', 200 );
 $t0   = microtime( true );
@@ -291,15 +322,18 @@ for ( $i = 1; $i <= 60; $i++ ) {
 $parser->filter_content( $mixed );
 check( '兩個語言合計仍不超過上限', $GLOBALS['mwl_http_calls'], MWL_Wikipedia::REALTIME_MAX_BATCHES );
 
-echo "\n=== 13. 儲存文章時不受前台額度限制 ===\n";
+echo "\n=== 13. 儲存文章時同樣受批次上限保護 ===\n";
 $GLOBALS['mwl_transients'] = array();
+MWL_Wikipedia::schedule_queue();
 reset_batches();
 
 $post               = new WP_Post();
 $post->ID           = 1;
 $post->post_content = $many;
 $parser->warm_post( 1, $post );
-check( '儲存時 150 個詞彙全部查完（3 批）', $GLOBALS['mwl_http_calls'], 3 );
+check( '儲存時 150 個詞彙只同步查 2 批', $GLOBALS['mwl_http_calls'], MWL_Wikipedia::REALTIME_MAX_BATCHES );
+MWL_Wikipedia::schedule_queue();
+check( '儲存時超出額度的批次改排背景', count( $GLOBALS['mwl_scheduled'] ), 1 );
 
 $GLOBALS['mwl_options']['mwl_settings'] = array();
 MWL_Settings::reset_cache();
@@ -334,6 +368,36 @@ check( '選單含中文繁體', isset( $langs['zh-tw'] ), true );
 check( '選單不含哨兵值', isset( $langs[ MWL_Settings::CUSTOM_LANG ] ), false );
 
 MWL_Settings::reset_cache();
+
+echo "\n=== 15. 編輯面板查詢上限與重新導向 ===\n";
+$report = new ReflectionMethod( 'MWL_Metabox', 'report_html' );
+if ( PHP_VERSION_ID < 80100 ) {
+	$report->setAccessible( true );
+}
+
+$GLOBALS['mwl_transients'] = array();
+MWL_Wikipedia::schedule_queue();
+reset_batches();
+$panel_post               = new WP_Post();
+$panel_post->ID           = 99;
+$panel_post->post_content = $many;
+$GLOBALS['mwl_posts'][99] = $panel_post;
+
+for ( $i = 101; $i <= 150; $i++ ) {
+	seed( 'Term ' . $i, 'ja', true );
+}
+
+$panel_html               = $report->invoke( null, 99, 'force' );
+check( '面板強制重查最多同步送出 2 批', $GLOBALS['mwl_http_calls'], MWL_Wikipedia::REALTIME_MAX_BATCHES );
+check( '面板超出額度時沿用 50 筆既有快取', substr_count( $panel_html, '未檢查' ), 0 );
+MWL_Wikipedia::schedule_queue();
+check( '沿用快取的超額批次仍排入背景刷新', count( $GLOBALS['mwl_scheduled'] ), 1 );
+
+$GLOBALS['mwl_transients'] = array();
+seed( 'wordpress', 'en', true, 'WordPress' );
+$panel_post->post_content = '[[en:wordpress]]';
+$panel_html               = $report->invoke( null, 99, 'cache' );
+contains( '面板連到重新導向後的正式條目', $panel_html, 'href="https://en.wikipedia.org/wiki/WordPress"' );
 
 echo "\n========================================\n";
 echo "  通過 $pass 項，失敗 $fail 項\n";
