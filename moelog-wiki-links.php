@@ -3,7 +3,7 @@
  * Plugin Name:       Moelog Wiki Links
  * Plugin URI:        https://www.moelog.com/
  * Description:       在文章內文使用 [[詞彙]] 語法自動連結到維基百科，並自動檢查條目是否存在；不存在時以 MediaWiki 風格的紅色連結呈現。better-wiki-links 的現代替代品。
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Moelog
@@ -16,7 +16,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'MWL_VERSION', '1.0.0' );
+define( 'MWL_VERSION', '1.0.1' );
 define( 'MWL_FILE', __FILE__ );
 define( 'MWL_DIR', plugin_dir_path( __FILE__ ) );
 define( 'MWL_URL', plugin_dir_url( __FILE__ ) );
