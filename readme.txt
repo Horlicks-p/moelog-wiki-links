@@ -4,7 +4,7 @@ Tags: wiki, wikipedia, links, shortcode, acgn
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -73,6 +73,16 @@ ACGN 相關條目在日文維基百科最完整。設定頁的「預設語言」
 * `mwl_metabox_post_types` — 過濾要顯示檢查面板的文章類型。
 
 == Changelog ==
+
+= 1.0.1 =
+* 修正含引號的條目名稱失效：`the_content` 與 `the_excerpt` 改以優先權 9 處理，趕在 `wptexturize` 之前。先前 `[[Assassin's Creed]]` 的引號會被轉成 HTML 實體，導致網址壞掉且永遠查不到條目。
+* 修正停用與解除安裝沒有清乾淨背景排程：改用 `wp_unschedule_hook()`。`wp_clear_scheduled_hook()` 以參數比對，清不掉本外掛帶語言與詞彙參數的事件。
+* 修正內文中的裸 `<`（例如 `if (a < b)`）會吞掉後面的詞彙。
+* 儲存文章時的預熱與編輯面板的重新檢查改為受同步批次上限保護，超出的詞彙改排背景查詢，避免存檔被外部請求拖住。
+* 編輯面板改為沿用既有快取，API 失敗或超出額度時不再退回「未檢查」。
+* 編輯面板的連結改為指向重新導向解析後的正式條目。
+* 快取前綴改為外掛專屬命名，清除快取時不會誤傷其他外掛的資料。
+* 關閉存在性檢查時不再標記 `mwl-unchecked`。
 
 = 1.0.0 =
 * 首次釋出。
